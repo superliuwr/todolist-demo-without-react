@@ -1,82 +1,112 @@
-var state = {
-	items: [],
-	id: 0
-};
-
-var store = createStore(state);
-store.onUpdate('renderListener', function(state) {
-	render(state, $('#list'));
-});
-
-$('#add').on('click', function(e) {
-	var value = $('#input').val().trim();
-	$('#input').val('');
-	state.items.push({
-		id: state.id++,
-		text: value,
-		completed: false
-	});
-	store.setState(state);
-});
-
-$('#list').on('click', '.item', function() {
-	var toggleId = parseInt($(this).attr('id'));
-	state.items.forEach(function(el) {
-		if (el.id === toggleId) {
-			el.completed = !el.completed;
+function createElement(tag, attrs, children) {
+	var elem = $('<' + tag + '>');
+	for (var key in attrs) {
+		var val = attrs[key];
+		if (key.indexOf('on') === 0) {
+			var event = key.substr(2).toLowerCase();
+			elem.on(event, val)
+		} else {
+			elem.attr(key, val);
 		}
-	});
-	store.setState(state);
-});
-
-$('#input').on('keyup', function() {
-	state.value = $(this).val().trim();
-	store.setState(state);
-});
-
-function render(props, node) {
-	node.html(ItemsList({
-		items: props.items
-	}));
+	}
+	return elem.html(children);
 }
 
 function ItemRow(props) {
-	var className = props.completed ? ' completed' : '';
-	return '<li class="item' + className + '" id="' + props.id + '">(' +
-		props.id + ') ' + props.text + '</li>';
+	var className = props.completed ? ' item completed' : 'item';
+	return createElement('li', {
+		id: props.id,
+		class: className,
+		onClick: props.onUpdate.bind(null, props.id)
+	}, props.text);
+}
+
+function extending(base, item) {
+	return $.extend({}, item, base);
 }
 
 function ItemsList(props) {
-	return '<ul>' + props.items.map(ItemRow).join('') + '</ul>';
+	return createElement('ul', {}, props.items.map(extending.bind(null, {
+		onUpdate: props.onUpdate
+	})).map(ItemRow));
 }
 
-function createStore(initialState) {
-	var _state = initialState || {},
-		_listeners = [];
-
-	function updateListeners(state) {
-		_listeners.forEach(function(listener) {
-			listener.cb(state);
-		});
+function SearchBar(props) {
+	function onButtonClick(e) {
+		var val = $('#input').val();
+		props.update(val);
+		$('#input').val('');
+		e.preventDefault();
 	}
 
-	return {
-		setState: function(state) {
-			_state = state;
-			updateListeners(state);
-		},
+	var input = createElement('input', {
+		id: 'input'
+	});
+	var button = createElement('button', {
+		id: 'add',
+		onClick: onButtonClick.bind(null)
+	}, 'Add');
 
-		getState: function() {
-			return _state;
-		},
+	return createElement('div', {
+		class: 'serach-bar'
+	}, [input, button]);
+}
 
-		onUpdate: function(name, cb) {
-			_listeners.push({
-				name: name,
-				cb: cb
-			});
+function App(props) {
+	function getInitialState(props) {
+		return {
+			items: [],
+			id: 0
 		}
 	}
+
+	var _state = getInitialState(),
+		_node = null;
+
+	function setState(state) {
+		_state = state;
+		render();
+	}
+
+	function updateSearchState(value) {
+		_state.items.push({
+			id: _state.id++,
+			text: value,
+			completed: false
+		});
+		setState(_state);
+	}
+
+	function updateState(toggleId) {
+		_state.items.forEach(function(el) {
+			if (el.id === toggleId) {
+				el.completed = !el.completed;
+			}
+		});
+		setState(_state);
+	}
+
+	function render() {
+		var children = [SearchBar({
+			update: updateSearchState
+		}), ItemsList({
+			items: _state.items,
+			onUpdate: updateState
+		})];
+		if (!_node) {
+			return _node = createElement('div', {
+				class: 'main'
+			}, children);
+		} else {
+			return _node.html(children);
+		}
+	}
+
+	return render();
 }
 
-render();
+function render(component, node) {
+	node.empty().append(component);
+}
+
+render(App(), $('#app'));
