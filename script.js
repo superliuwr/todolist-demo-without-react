@@ -11,7 +11,7 @@ $('#add').on('click', function(e) {
 		text: value,
 		completed: false
 	});
-	render();
+	render(state, $('#list'));
 });
 
 $('#list').on('click', '.item', function() {
@@ -21,23 +21,28 @@ $('#list').on('click', '.item', function() {
 			el.completed = !el.completed;
 		}
 	});
-	render();
+	render(state, $('#list'));
 });
 
 $('#input').on('keyup', function() {
 	state.value = $(this).val().trim();
-	render();
+	render(state, $('#list'));
 });
 
-function render() {
-	var items = state.items.map(function(item) {
-		var completed = item.completed ? 'completed' : '';
-		return '<li class="item ' + completed + '" id="' + item.id + '">(' + item.id + ') ' + item.text + '</li>';
-	}).join('');
+function render(props, node) {
+	node.html(ItemsList({
+		items: props.items
+	}));
+}
 
-	var html = '<ul>' + items + '</ul>';
+function ItemRow(props) {
+	var className = props.completed ? ' completed' : '';
+	return '<li class="item' + className + '" id="' + props.id + '">(' +
+		props.id + ') ' + props.text + '</li>';
+}
 
-	$('#list').html(html);
+function ItemsList(props) {
+	return '<ul>' + props.items.map(ItemRow).join('') + '</ul>';
 }
 
 render();
