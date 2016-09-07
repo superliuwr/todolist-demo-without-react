@@ -3,6 +3,11 @@ var state = {
 	id: 0
 };
 
+var store = createStore(state);
+store.onUpdate('renderListener', function(state) {
+	render(state, $('#list'));
+});
+
 $('#add').on('click', function(e) {
 	var value = $('#input').val().trim();
 	$('#input').val('');
@@ -11,7 +16,7 @@ $('#add').on('click', function(e) {
 		text: value,
 		completed: false
 	});
-	render(state, $('#list'));
+	store.setState(state);
 });
 
 $('#list').on('click', '.item', function() {
@@ -21,12 +26,12 @@ $('#list').on('click', '.item', function() {
 			el.completed = !el.completed;
 		}
 	});
-	render(state, $('#list'));
+	store.setState(state);
 });
 
 $('#input').on('keyup', function() {
 	state.value = $(this).val().trim();
-	render(state, $('#list'));
+	store.setState(state);
 });
 
 function render(props, node) {
@@ -43,6 +48,35 @@ function ItemRow(props) {
 
 function ItemsList(props) {
 	return '<ul>' + props.items.map(ItemRow).join('') + '</ul>';
+}
+
+function createStore(initialState) {
+	var _state = initialState || {},
+		_listeners = [];
+
+	function updateListeners(state) {
+		_listeners.forEach(function(listener) {
+			listener.cb(state);
+		});
+	}
+
+	return {
+		setState: function(state) {
+			_state = state;
+			updateListeners(state);
+		},
+
+		getState: function() {
+			return _state;
+		},
+
+		onUpdate: function(name, cb) {
+			_listeners.push({
+				name: name,
+				cb: cb
+			});
+		}
+	}
 }
 
 render();
